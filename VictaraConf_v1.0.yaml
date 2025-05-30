@@ -122,10 +122,31 @@ NodeParam: &NodeParam {type: http, interval: 86400, health-check: {enable: true,
 #   - url - 用于检测节点连通性的 URL
 #   - interval: 60 - 健康检查间隔，单位为秒
 
-# 锚点 - 节点订阅
-proxy-providers: 
-  AirPort-00: {url: 'https://example.com/subscribe/your_token', <<: *NodeParam, name-prefix: 'AP0|', path: './proxy_provider/AirPort-00.yaml'}  # 主要订阅源
-  AirPort-01: {url: 'https://example.org/subscribe/your_token', <<: *NodeParam, name-prefix: 'AP1|', path: './proxy_provider/AirPort-01.yaml'}  # 备用订阅源
+# ====== 订阅提供者配置 ======
+# 添加订阅源，每个订阅源可以使用不同的前缀区分
+proxy-providers:
+  AirPort-00:
+    type: http
+    url: 'https://example.com/subscribe/your_token'
+    interval: 86400
+    path: './proxy_provider/AirPort-00.yaml'
+    health-check: 
+      enable: true
+      url: 'http://www.google.com/generate_204'
+      interval: 60
+    override:
+      name-prefix: 'AP0|'  # 主要订阅源
+  AirPort-01:
+    type: http
+    url: 'https://example.org/subscribe/your_token'
+    interval: 86400
+    path: './proxy_provider/AirPort-01.yaml'
+    health-check: 
+      enable: true
+      url: 'http://www.google.com/generate_204'
+      interval: 60
+    override:
+      name-prefix: 'AP1|'  # 备用订阅源
 
 # ====== 节点筛选配置 ======
 # 锚点 - 节点筛选组（使用正则表达式匹配节点名称）
@@ -234,7 +255,12 @@ RuleSet: &RuleSet {type: http, behavior: classical, interval: 86400, format: yam
 # ====== 策略组配置 ======
 # 策略组定义了如何选择和使用节点，包括手动选择、自动选择、故障转移等方式
 proxy-groups: 
-  - {name: Proxy, type: select, proxies: [HKG, JPN, KOR, SGP, USA, GBR, FRA, DEU], icon: 'https://raw.githubusercontent.com/pompurin404/mihomo-party/master/resources/icon.png'} # 主代理策略组
+  # 主节点选择组
+  - {name: Proxy, type: select, proxies: [Auto, HKG, JPN, KOR, SGP, USA, GBR, FRA, DEU, AirPort-Nodes], icon: 'https://raw.githubusercontent.com/pompurin404/mihomo-party/master/resources/icon.png'} # 主代理策略组
+  
+  # 订阅节点分组
+  - {name: AirPort-Nodes, type: select, use: [AirPort-00, AirPort-01], icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Server.png'} # 订阅节点选择组
+  - {name: Auto, type: url-test, use: [AirPort-00, AirPort-01], url: 'http://connectivitycheck.platform.hicloud.com/generate_204', interval: 300, tolerance: 50, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png'} # 自动选择
   - {name: Apple, type: select, proxies: [DIRECT, Proxy, HKG, JPN, KOR, SGP, USA, GBR, FRA, DEU], icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Apple_1.png'} # 苹果服务
   - {name: OpenAI, type: load-balance, strategy: consistent-hashing, proxies: [TWN, JPN, USA, SGP, KOR], url: 'http://connectivitycheck.platform.hicloud.com/generate_204', interval: 300, icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ChatGPT.png'} # OpenAI服务
   - {name: Telegram, type: select, proxies: [Proxy, HKG, JPN, KOR, SGP, USA, GBR, FRA, DEU], icon: 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram.png'} # Telegram
